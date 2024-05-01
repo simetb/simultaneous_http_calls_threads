@@ -3,13 +3,13 @@ import concurrent.futures
 import validates as validate
 import message_format as msf
 
-DO_SOMETHING: callable = None
 OUTPUT_DATA_LIST: list = []
 
 def do_simultaneus_requests(
     requests_list: list,
     threads_amount: int = 0,
-    do_something: callable = None,
+    callback: callable = None,
+    dev_status_messages: bool = True
     ):
     
     # Validating the request structure
@@ -24,9 +24,14 @@ def do_simultaneus_requests(
         threads_amount = len(requests_list)
         
         
-    # Saving the do_something function to be executed in the threads
-    DO_SOMETHING = do_something
-        
+    # Saving the callback function to be executed in the threads
+    global callback_request 
+    callback_request = callback
+    
+    # Saving the config to know if show the confirm message
+    global status_messages
+    status_messages = dev_status_messages 
+    
     with concurrent.futures.ThreadPoolExecutor(max_workers=threads_amount) as executor:
         executor.map(do_requets, requests_list)
     
@@ -52,30 +57,32 @@ def do_requets(request):
             
         if response.status_code == 200:
             try:
-                if DO_SOMETHING is not None:
-                    do_somethin_request= DO_SOMETHING(response)
+                if callback_request is not None:
+                    do_somethin_request= callback_request(response)
                     if(do_somethin_request is not None): OUTPUT_DATA_LIST.append(do_somethin_request) 
                     else: OUTPUT_DATA_LIST.append(response)
                 else: OUTPUT_DATA_LIST.append(response)
-                print (f'{request["request_id"]} - OK')
+                
+                print (f'{request["request_id"]} - OK') if status_messages else None
             except:
                 raise msf.SimultaneusRequestError(
                     msf.error_message(
                         "004",
                         "DO_SOMETHING_ERROR",
-                        f"The do_something function was not executed for requerst {request["request_id"]}, returning None",
+                        "a"
+                        "The callback function was not executed for requerst {}, returning None".format(request["request_id"]),
                     )
                 )
         else:
             OUTPUT_DATA_LIST.append(None)
-            print (f'{request["request_id"]} - ERROR')
+            print (f'{request["request_id"]} - ERROR') if status_messages else None
         
     except Exception as exc:
         raise msf.SimultaneusRequestError(
             msf.error_message(
                 "003",
                 "REQUEST_ERROR",
-                f"The request {request["request_id"]} was not executed: {exc}",
+                "The request {} was not executed: {}".format(request["request_id"],exc),
             )
         )
 

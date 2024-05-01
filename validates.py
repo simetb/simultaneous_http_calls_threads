@@ -1,6 +1,5 @@
 import message_format as msf
 
-
 # Functions to check the thread amount
 def check_thread_amount(thread_amount: int) -> None:
     # Check if the thread amount is valid (int)
